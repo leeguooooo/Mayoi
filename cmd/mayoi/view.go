@@ -935,6 +935,10 @@ func (a *app) statusBar(c *ui.Context) {
 		}
 		if m := a.themeMascot(); m != nil {
 			a.statusMascot(c, m)
+		} else {
+			// None shows: a repaint of the frame before, which had one,
+			// may have set it moving as the theme changed.
+			a.mascot = mascotState{}
 		}
 		a.remoteStatus(c, text)
 		a.portsStatus(c, text)
