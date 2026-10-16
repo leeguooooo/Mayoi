@@ -5,6 +5,20 @@ needs a `## <version>` section here, or its build fails.
 
 ## Unreleased
 
+- **Compare HEAD to Here**, **Compare Here to HEAD** and **Compare with
+  Selected** open the changes in a diff tab, inline or side by side, with
+  changed words tinted and unchanged lines folded, rather than as a patch
+  in a text tab; a card names the two commits, and the tab comes back with
+  the window.
+- The terminal panel's header has a menu: right-click it to move the panel
+  to the bottom, left or right, maximize it or hide it.
+- Source Control's **Remotes** shows each remote with a cloud and where it
+  points, as `github.com/owner/repo`, before you expand it.
+- Switching Source Control's **Repository** back to **Remotes** no longer
+  shows "No remotes" for a moment while it reads them again.
+- A commit in Source Control keeps its time in view in a narrow sidebar or
+  under an expanded branch: its branch and tag badges narrow, or count the
+  rest, before they push the time out.
 - The terminal panel can sit at the bottom, left or right of the window:
   **View → Panel Position**, the command palette's **Move Panel to Left**,
   **Right** and **Bottom**, the `panelPosition` setting and

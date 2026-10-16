@@ -82,6 +82,8 @@ func (a *app) diffViewUI(c *ui.Context, v *diffView) {
 			ui.Box(c).Fill().Background(p.editor)
 		case cm.err != "":
 			message(cm.err)
+		case cm.from != "":
+			message("No differences between " + git.ShortHash(cm.from) + " and " + git.ShortHash(cm.hash) + ".")
 		default:
 			message("The commit changes no files.")
 		}
@@ -765,7 +767,11 @@ func (a *app) layOutCommitCard(c *ui.Context, v *diffView, w float32) *commitCar
 		_, h := c.MeasureText(0, s)
 		return h
 	}
-	k.subject = ui.Span{Text: info.Subject, Size: 15, Weight: 600, Color: p.text}
+	subject := info.Subject
+	if cm.from != "" {
+		subject = "Changes from " + a.revisionLabel(cm.from) + " to " + a.revisionLabel(cm.hash)
+	}
+	k.subject = ui.Span{Text: subject, Size: 15, Weight: 600, Color: p.text}
 	_, k.subjectH = c.MeasureText(w, k.subject)
 	if one := lineOf(k.subject); k.subjectH > maxCardSubject*one+0.5 {
 		k.subjectH, k.cut = maxCardSubject*one, true
@@ -783,7 +789,27 @@ func (a *app) layOutCommitCard(c *ui.Context, v *diffView, w float32) *commitCar
 			ui.RichText(c, s).SingleLine().Shrink(1).MinWidth(0)
 		}}
 	}
+	hashChip := func(h string, dot bool) cardPiece {
+		hash := ui.Span{Text: git.ShortHash(h), Font: a.font.family, Size: a.font.size - 1, Color: p.accent}
+		return cardPiece{w: measure(hash) + 12, dot: dot, show: func() {
+			b := ui.ButtonBase(c.Key("card-hash:"+h)).Height(18).Padding(0, 6).Radius(5).AlignItems(ui.Center).
+				Background(p.accent.Alpha(0.1)).Label("Copy Commit Hash").Tooltip("Copy Commit Hash")
+			if b.Hovered() {
+				b.Background(p.accent.Alpha(0.2))
+			}
+			if b.Clicked() {
+				a.post(func() { a.copyCommitHash(h) })
+			}
+			b.Children(func() { ui.RichText(c, hash).SingleLine() })
+		}}
+	}
 	var pieces []cardPiece
+	if cm.from != "" {
+		// A comparison: its two commits, and what changed between them.
+		pieces = append(pieces, hashChip(cm.from, false), text(label("→", 400, p.muted), false), hashChip(cm.hash, false),
+			text(label(plural(len(v.files), "file")+" changed", 400, p.muted), true))
+		return a.finishCommitCard(c, v, k, w, pieces)
+	}
 	author := label(info.Author, 600, p.text)
 	col := avatarColor(p, info.Email+info.Author)
 	pieces = append(pieces, cardPiece{w: 18 + 6 + measure(author), show: func() {
@@ -799,18 +825,7 @@ func (a *app) layOutCommitCard(c *ui.Context, v *diffView, w float32) *commitCar
 		when := "committed " + ago(info.Time, time.Now()) + " · " + info.Time.Format("Jan 2, 2006 15:04")
 		pieces = append(pieces, text(label(when, 400, p.muted), false))
 	}
-	hash := ui.Span{Text: git.ShortHash(cm.hash), Font: a.font.family, Size: a.font.size - 1, Color: p.accent}
-	pieces = append(pieces, cardPiece{w: measure(hash) + 12, dot: true, show: func() {
-		b := ui.ButtonBase(c.Key("card-hash")).Height(18).Padding(0, 6).Radius(5).AlignItems(ui.Center).
-			Background(p.accent.Alpha(0.1)).Label("Copy Commit Hash").Tooltip("Copy Commit Hash")
-		if b.Hovered() {
-			b.Background(p.accent.Alpha(0.2))
-		}
-		if b.Clicked() {
-			a.post(func() { a.copyCommitHash(cm.hash) })
-		}
-		b.Children(func() { ui.RichText(c, hash).SingleLine() })
-	}})
+	pieces = append(pieces, hashChip(cm.hash, true))
 	for i, b := range refBadges(info.Refs) {
 		fg, bg := p.accent, p.accent.Alpha(0.14)
 		switch b.Kind {
@@ -838,7 +853,22 @@ func (a *app) layOutCommitCard(c *ui.Context, v *diffView, w float32) *commitCar
 		pieces = append(pieces, text(label("merge of "+plural(len(info.Parents), "parent"), 400, p.muted), true))
 	}
 	pieces = append(pieces, text(label(plural(len(v.files), "file")+" changed", 400, p.muted), true))
-	dotW := measure(label("·", 400, p.faint))
+	return a.finishCommitCard(c, v, k, w, pieces)
+}
+
+// finishCommitCard wraps the pieces of a card's lines to its width w,
+// lays out the rest of its message, and works out how tall it is.
+func (a *app) finishCommitCard(c *ui.Context, v *diffView, k *commitCard, w float32, pieces []cardPiece) *commitCard {
+	p := a.pal
+	cm := v.commit
+	info := cm.info
+	lineOf := func(s ui.Span) float32 {
+		s.Text = "M"
+		_, h := c.MeasureText(0, s)
+		return h
+	}
+	dot, _ := c.MeasureText(0, ui.Span{Text: "·", Size: headerFontSize, Color: p.faint})
+	dotW := dot
 	var line []cardPiece
 	lineW := float32(0)
 	for _, pc := range pieces {
@@ -874,6 +904,15 @@ func (a *app) layOutCommitCard(c *ui.Context, v *diffView, w float32) *commitCar
 	return k
 }
 
+// revisionLabel is how a comparison's card names a commit: HEAD while it
+// is the one checked out, else its short hash.
+func (a *app) revisionLabel(hash string) string {
+	if st := a.git.status; st != nil && st.Head == hash {
+		return "HEAD"
+	}
+	return git.ShortHash(hash)
+}
+
 // copyCommitHash puts the hash of a commit on the clipboard.
 func (a *app) copyCommitHash(hash string) {
 	a.services.WriteClipboard(hash)
@@ -890,7 +929,7 @@ func (a *app) commitCardUI(c *ui.Context, v *diffView, k *commitCard, x, y, w, h
 		Padding(cardPadY, cardPadX, cardPadY, diffRailW+cardPadX).Justify(ui.Center).AlignItems(ui.Start).Selectable().Children(func() {
 		subject := ui.RichText(c, k.subject).Width(k.w).MaxLines(maxCardSubject).Shrink(0)
 		if k.cut {
-			subject.Tooltip(cm.info.Subject)
+			subject.Tooltip(k.subject.Text)
 		}
 		ui.Box(c).Height(cardGap).Shrink(0)
 		dot := ui.Span{Text: "·", Size: headerFontSize, Color: p.faint}

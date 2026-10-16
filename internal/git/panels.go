@@ -1,6 +1,7 @@
 package git
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -12,6 +13,9 @@ import (
 type Remote struct {
 	Name                string
 	FetchURLs, PushURLs []string
+	// URL is its first URL as configured, before any rewriting, read for
+	// every remote at once, shown where its details are not.
+	URL string
 }
 
 // PullBranch fast-forwards the selected local branch from its configured
@@ -69,6 +73,30 @@ func (r *Repo) RemoteList() ([]Remote, error) {
 		remotes = append(remotes, remote)
 	}
 	return remotes, nil
+}
+
+// ConfiguredRemoteURLs returns the first URL configured for each remote,
+// as written, in one read of the config.
+func (r *Repo) ConfiguredRemoteURLs() (map[string]string, error) {
+	out, err := r.run(nil, "config", "-z", "--get-regexp", `^remote\..*\.url$`)
+	if e := (*Error)(nil); errors.As(err, &e) && len(out) == 0 && e.Stderr == "" {
+		// No remote has a URL: config exits 1, saying nothing, for no match.
+		return map[string]string{}, nil
+	} else if err != nil {
+		return nil, err
+	}
+	urls := map[string]string{}
+	for _, rec := range strings.Split(string(out), "\x00") {
+		key, url, ok := strings.Cut(rec, "\n")
+		if !ok {
+			continue
+		}
+		name := strings.TrimSuffix(strings.TrimPrefix(key, "remote."), ".url")
+		if _, seen := urls[name]; !seen {
+			urls[name] = url
+		}
+	}
+	return urls, nil
 }
 
 // RemoteURLs resolves URL rewriting only when a remote's details are shown.

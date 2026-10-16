@@ -91,6 +91,10 @@ func RemoteWebURL(rawURL, hash string) (string, error) {
 }
 
 // commitRevision resolves one revision before it enters diff arguments.
+// ResolveCommit returns the full hash of the commit a revision names, as
+// HEAD or a short hash.
+func (r *Repo) ResolveCommit(rev string) (string, error) { return r.commitRevision(rev) }
+
 func (r *Repo) commitRevision(ref string) (string, error) {
 	if ref == "" || strings.HasPrefix(ref, "-") || strings.ContainsAny(ref, "\x00\r\n") {
 		return "", fmt.Errorf("invalid revision %q", ref)

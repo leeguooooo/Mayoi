@@ -206,7 +206,10 @@ type diffView struct {
 // commitDiff is the commit a diff shows, and the files it changed, read
 // in the background.
 type commitDiff struct {
-	hash            string
+	hash string
+	// from is the commit a comparison starts at, whose changes are those
+	// from it to hash; "" for the changes of the commit hash alone.
+	from            string
 	info            git.Commit
 	files           []git.CommitFile
 	loading, loaded bool
@@ -259,14 +262,33 @@ func newDiffView(layout diffLayout) *diffView {
 
 // newCommitView makes the tab of a commit's changes, its message read
 // already in info when its hash is set.
-func newCommitView(layout diffLayout, hash string, info git.Commit) *diffView {
+//
+// A key "from..to" makes the tab of a comparison instead: the changes from
+// commit from to commit to, read as those of a commit whose parent is from.
+func newCommitView(layout diffLayout, key string, info git.Commit) *diffView {
 	v := newDiffView(layout)
-	v.commit = &commitDiff{hash: hash, info: info}
+	if from, to, ok := strings.Cut(key, ".."); ok {
+		v.commit = &commitDiff{hash: to, from: from, info: git.Commit{Hash: to, Parents: []string{from}}}
+		return v
+	}
+	v.commit = &commitDiff{hash: key, info: info}
 	return v
+}
+
+// key is what names a commit's diff: its hash, or "from..to" for a
+// comparison, as newCommitView takes it.
+func (cm *commitDiff) key() string {
+	if cm.from == "" {
+		return cm.hash
+	}
+	return cm.from + ".." + cm.hash
 }
 
 func (v *diffView) name() string {
 	if c := v.commit; c != nil {
+		if c.from != "" {
+			return git.ShortHash(c.from) + " → " + git.ShortHash(c.hash)
+		}
 		if c.info.Subject != "" {
 			return c.info.Subject
 		}
@@ -281,7 +303,7 @@ func (v *diffView) same(o *diffView) bool {
 	if v.commit == nil || o.commit == nil {
 		return v.commit == nil && o.commit == nil
 	}
-	return v.commit.hash == o.commit.hash
+	return v.commit.key() == o.commit.key()
 }
 
 // stop lets go of the highlighters.
@@ -416,15 +438,15 @@ func (col *column) showingDiff(v *diffView) int {
 	return slices.IndexFunc(col.tabs, func(t *colTab) bool { return t.diff != nil && t.diff.same(v) })
 }
 
-// commitTab returns a commit's changes in an unlocked column, nil when
-// none has one.
+// commitTab returns a commit's changes, or a comparison's by its
+// "from..to", in an unlocked column, nil when none has one.
 func (a *app) commitTab(hash string) (*column, int) {
 	for _, col := range a.cols {
 		if col.locked {
 			continue
 		}
 		for i, t := range col.tabs {
-			if t.diff != nil && t.diff.commit != nil && t.diff.commit.hash == hash {
+			if t.diff != nil && t.diff.commit != nil && t.diff.commit.key() == hash {
 				return col, i
 			}
 		}

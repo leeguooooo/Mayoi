@@ -56,7 +56,7 @@ func (a *app) rememberClosed(t *colTab) {
 	if v := t.diff; v != nil {
 		c.diff, c.layout, c.full = true, v.layout, v.full
 		if v.commit != nil {
-			c.commit = v.commit.hash
+			c.commit = v.commit.key()
 		}
 		c.y, c.wrap, c.wrapGen = v.scroll.Y, v.wrap, v.wrapGen
 	}

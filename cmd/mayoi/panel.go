@@ -311,6 +311,33 @@ func (a *app) hidePanel() {
 	a.focusColumn()
 }
 
+// panelMenu is the menu of the panel's header: where the panel sits,
+// and its size.
+func (a *app) panelMenu(m *ui.Menu) {
+	m.Submenu("Panel Position", func(m *ui.Menu) {
+		for _, pos := range []struct{ label, id, side string }{
+			{"Bottom", "", "bottom"},
+			{"Left", "left", "left"},
+			{"Right", "right", "right"},
+		} {
+			if m.Item(pos.label).Checked(a.panelSide() == pos.side).Chosen() {
+				a.post(func() { a.setPanelPosition(pos.id) })
+			}
+		}
+	})
+	m.Separator()
+	label := "Maximize Panel"
+	if a.panelMax {
+		label = "Restore Panel"
+	}
+	if m.Item(label).Chosen() {
+		a.post(func() { a.panelMax = !a.panelMax })
+	}
+	if m.Item("Hide Panel").Chosen() {
+		a.post(a.hidePanel)
+	}
+}
+
 // panel is the terminal panel: a header of its terminals and its tools,
 // and the terminal shown. A terminal dragged from a tab is dropped on it,
 // and a file dragged from the sidebar types its path.
@@ -333,7 +360,9 @@ func (a *app) panel(c *ui.Context) {
 	width := box.Bounds().W
 	titled := a.panelSide() == "bottom" || width == 0 || width >= panelTitleW
 	box.Children(func() {
-		ui.Row(c).Height(panelHeadH).Padding(0, 8, 0, 14).Gap(4).AlignItems(ui.Center).Children(func() {
+		head := ui.Row(c).Height(panelHeadH).Padding(0, 8, 0, 14).Gap(4).AlignItems(ui.Center)
+		head.ContextMenu(a.panelMenu)
+		head.Children(func() {
 			if titled {
 				ui.Column(c).Height(panelHeadH).Justify(ui.Center).Children(func() {
 					ui.Text(c, "TERMINAL").FontSize(11).FontWeight(600).LetterSpacing(0.7).TextColor(p.text)

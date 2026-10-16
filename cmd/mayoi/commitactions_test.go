@@ -61,11 +61,55 @@ func TestCommitToolsMenuAndComparison(t *testing.T) {
 		t.Fatal(err)
 	}
 	hs.settleGit()
-	if ed := a.activeEditor(); ed == nil || !strings.Contains(ed.buf.String(), "-// comparison result") || !strings.Contains(ed.document.title, " → ") {
-		t.Fatal("missing directed comparison patch")
+	// The comparison opens in a diff of its own, from the selected commit
+	// to the one chosen, the card naming them.
+	tab := a.activeTab()
+	if tab == nil || tab.diff == nil || tab.diff.commit == nil {
+		t.Fatal("the comparison is not shown in a diff")
 	}
-	if got, want := a.activeEditor().document.title, cm.Short()+" → "+parent.Short()+".diff"; got != want {
+	v := tab.diff
+	if v.commit.from != cm.Hash || v.commit.hash != parent.Hash {
+		t.Fatalf("compared %s..%s, want %s..%s", v.commit.from, v.commit.hash, cm.Hash, parent.Hash)
+	}
+	for range 20 {
+		hs.settle()
+	}
+	if len(v.files) != 1 || v.files[0].path != hs.path("main.go") {
+		t.Fatalf("compared files %v", v.files)
+	}
+	if got, want := v.name(), cm.Short()+" → "+parent.Short(); got != want {
 		t.Fatalf("comparison named %q, want %q", got, want)
+	}
+	if !hs.tt.HasText("Changes from HEAD to " + parent.Short()) {
+		t.Fatalf("the comparison's card: %q", hs.tt.Texts())
+	}
+	// It is kept by its two commits, and comes back as it was.
+	key := cm.Hash + ".." + parent.Hash
+	a.rememberTabs()
+	kept := false
+	for _, ts := range a.window.Columns[0].Tabs {
+		kept = kept || ts.Diff == "commit:"+key
+	}
+	if !kept {
+		t.Errorf("tabs kept %+v", a.window.Columns)
+	}
+	a.closeActive()
+	hs.settle()
+	if col, _ := a.commitTab(key); col != nil {
+		t.Fatal("the comparison did not close")
+	}
+	a.reopenClosed()
+	hs.settleGit()
+	hs.settle()
+	if tab := a.activeTab(); tab == nil || tab.diff == nil || tab.diff.commit == nil || tab.diff.commit.key() != key {
+		t.Fatalf("reopened %+v", tab)
+	}
+	v = a.activeTab().diff
+	// Its commit's own tab is another.
+	a.showCommit(parent, true)
+	hs.settle()
+	if a.activeTab().diff == v {
+		t.Fatal("the commit's changes opened in the comparison's tab")
 	}
 	a.commitPatch(cm, false)
 	hs.settleGit()

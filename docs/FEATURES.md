@@ -228,8 +228,10 @@ quotes the lines as they were. Comments not sent are kept with the folder's sess
 next start.
 
 Commit menus also offer **Create Patch…** and **Copy Changes (Patch)**, including binary changes and root commits.
-**Compare HEAD to Here** and **Compare Here to HEAD** open a patch in the chosen direction; **Select for Compare**
-then **Compare with Selected** compares two commits from the same repository. **Open Commit on Remote** supports
+**Compare HEAD to Here** and **Compare Here to HEAD** open the changes between the two in a diff tab, inline or side by
+side as the changes show, in the chosen direction; **Select for Compare** then **Compare with Selected** compares two
+commits from the same repository. A comparison's card names both commits, each a chip that copies its hash, and its tab
+comes back with the session. **Open Commit on Remote** supports
 GitHub, GitLab and Bitbucket, preferring a unique remote decoration, then the current upstream, origin or the first remote.
 
 ### Branches and remotes
@@ -237,7 +239,8 @@ GitHub, GitLab and Bitbucket, preferring a unique remote decoration, then the cu
 Source Control's **REPOSITORY** panel sits below **COMMITS**, starts collapsed and remembers whether it is open and its selected tab.
 **Branches** lists the current branch first, then the most recently committed branches, with their upstream and ahead/behind
 counts. Expand a branch for its history and any incoming or outgoing commits; **Load more** reads another page.
-**Remotes** lists the configured remotes. Expand a remote to read its fetch and push URLs and remote branches.
+**Remotes** lists the configured remotes, each with where it points. Expand a remote to read its fetch and push URLs and
+remote branches.
 Panel data loads when it is opened, and branch history loads when that branch is expanded.
 
 Branch rows offer checkout and pull; a remote branch's **Fetch Remote** fetches its whole remote. Context menus offer
@@ -296,7 +299,8 @@ search match opens with the match selected.
 
 Ghostty's emulator (libghostty-vt), in the panel or in a column tab. The panel is below the editors; **View → Panel
 Position**, the command palette's **Move Panel to Left**, **Right** and **Bottom**, and `keybindings.json`'s
-`workbench.action.positionPanelLeft` and its neighbours put it at a side of the window. There it sits past the sidebar,
+`workbench.action.positionPanelLeft` and its neighbours, and **Panel Position** in the menu of the panel's header, put
+it at a side of the window. There it sits past the sidebar,
 so with the sidebar on the same side the panel is the outer one, and dragging its inner edge sizes it. The title bar's
 terminal button is on the panel's side too: left of the sidebar's button when both are on the left, at the right of the
 bar otherwise. You can run several terminals, move one between the panel and a column by dragging it or from its menu,

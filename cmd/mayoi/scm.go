@@ -935,14 +935,20 @@ func (a *app) scmCommit(c *ui.Context, i int, r scmRow, action *func()) {
 		if gr != nil {
 			lane = graphColor(p, gr.color)
 		}
-		shown := a.badgesShown()
+		// The row's lead, before its badges: its indent, the graph and
+		// the author.
+		lead := indent + 15 + 6
+		if r.at >= 0 {
+			lead += graphLaneW*float32(lanes-1) + 12 + 6
+		}
+		shown, badgeW := a.badgeRoom(len(badges), indent-6, lead)
 		for i, bd := range badges {
 			if i == shown && len(badges) > shown {
 				ui.Text(c, fmt.Sprintf("+%d", len(badges)-i)).FontSize(10.5).TextColor(p.muted).Padding(0, 4).
 					Height(16).Radius(4).Background(p.hover).Shrink(0)
 				break
 			}
-			a.refBadge(c, bd, lane)
+			a.refBadge(c, bd, lane, badgeW)
 		}
 		col := p.text
 		switch {
@@ -975,10 +981,30 @@ const (
 	graphMaxLanes = 6
 )
 
+// badgeRoom is how many of n badges a commit's row shows, and how wide
+// each is at most: those that fit beside the start of its subject and its
+// time, past its lead, sharing the room, none narrower than a few letters.
+func (a *app) badgeRoom(n int, indented, lead float32) (shown int, w float32) {
+	const gap, more, least, widest = 6, 30, 48, 110
+	shown = min(a.badgesShown(indented), n)
+	room := a.window.SidebarWidth - lead - 110
+	for ; shown > 0; shown-- {
+		r := room
+		if shown < n {
+			r -= more
+		}
+		if w = r/float32(shown) - gap; w >= least || shown == 1 {
+			return shown, min(max(w, 40), widest)
+		}
+	}
+	return 0, widest
+}
+
 // badgesShown is how many branches and tags a commit's row shows before
-// it counts the rest: more as the sidebar widens.
-func (a *app) badgesShown() int {
-	return min(max(1+int((a.window.SidebarWidth-240)/90), 1), 3)
+// it counts the rest: more as the sidebar widens, fewer as the row is
+// indented past the history's, so its subject and time keep their room.
+func (a *app) badgesShown(indented float32) int {
+	return min(max(1+int((a.window.SidebarWidth-indented-240)/90), 1), 3)
 }
 
 // historyGraph returns the lanes of the history, laid out once for each
@@ -1110,7 +1136,7 @@ func refBadges(refs []git.Ref) []refBadge {
 
 // refBadge shows a branch or tag of a commit's row, in its lane's color:
 // a branch of a remote fainter, and a tag in the plain colors.
-func (a *app) refBadge(c *ui.Context, b refBadge, lane ui.Color) {
+func (a *app) refBadge(c *ui.Context, b refBadge, lane ui.Color, maxW float32) {
 	p := a.pal
 	fg, bg, icon := lane, lane.Alpha(0.16), iconBranch
 	switch b.Kind {
@@ -1126,7 +1152,7 @@ func (a *app) refBadge(c *ui.Context, b refBadge, lane ui.Color) {
 		weight = 700
 	}
 	ui.Row(c).Gap(3).AlignItems(ui.Center).Height(16).Padding(0, 5, 0, 4).Radius(4).Background(bg).
-		MaxWidth(110).Shrink(0).Children(func() {
+		MaxWidth(maxW).Shrink(0).Children(func() {
 		if icon != nil {
 			ui.Icon(c, icon).FontSize(10).TextColor(fg).Shrink(0)
 		}

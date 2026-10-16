@@ -89,7 +89,7 @@ func (n *reviewNote) inDiff(v *diffView, f *diffFile) bool {
 		return false
 	}
 	if v.commit != nil {
-		return n.commit == v.commit.hash
+		return n.commit == v.commit.key()
 	}
 	return n.commit == "" && n.staged == (f.base == diffStaged)
 }
@@ -177,6 +177,9 @@ func (n *reviewNote) ref(rel func(string) string) string {
 		tags = append(tags, "removed lines, numbered as before the change")
 	}
 	switch {
+	case strings.Contains(n.commit, ".."):
+		from, to, _ := strings.Cut(n.commit, "..")
+		tags = append(tags, "in the changes from commit "+git.ShortHash(from)+" to "+git.ShortHash(to))
 	case n.commit != "":
 		tags = append(tags, "in commit "+git.ShortHash(n.commit))
 	case n.staged:
@@ -443,7 +446,7 @@ func (v *diffView) excerpt(f *diffFile, olds, news map[int]bool) *reviewNote {
 	}
 	n := &reviewNote{path: f.path, staged: f.base == diffStaged, diff: true, version: unfound}
 	if v.commit != nil {
-		n.commit, n.staged = v.commit.hash, false
+		n.commit, n.staged = v.commit.key(), false
 	}
 	last := -1
 	for k, r := range f.unified {

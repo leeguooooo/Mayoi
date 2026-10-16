@@ -623,7 +623,7 @@ func (a *app) splitRight() {
 	case t.diff != nil:
 		v := newDiffView(t.diff.layout)
 		if cm := t.diff.commit; cm != nil {
-			v = newCommitView(t.diff.layout, cm.hash, cm.info)
+			v = newCommitView(t.diff.layout, cm.key(), cm.info)
 		}
 		v.scroll, v.full, v.wrap, v.wrapGen = t.diff.scroll, t.diff.full, t.diff.wrap, t.diff.wrapGen
 		a.addTab(nc, 0, &colTab{diff: v})
@@ -715,7 +715,7 @@ func (a *app) rememberTabs() {
 			case t.term != nil:
 				ts = settings.Tab{Terminal: true}
 			case t.diff != nil && t.diff.commit != nil:
-				ts = settings.Tab{Diff: "commit:" + t.diff.commit.hash, Layout: t.diff.layout.key(), Transient: t.transient}
+				ts = settings.Tab{Diff: "commit:" + t.diff.commit.key(), Layout: t.diff.layout.key(), Transient: t.transient}
 			case t.diff != nil:
 				ts = settings.Tab{Diff: "all", Layout: t.diff.layout.key()}
 			case t.path() != "":

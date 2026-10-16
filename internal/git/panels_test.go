@@ -322,3 +322,20 @@ func TestPanelCurrentBranchPrecedesNewerBranches(t *testing.T) {
 		}
 	}
 }
+
+func TestConfiguredRemoteURLs(t *testing.T) {
+	r, run := repo(t)
+	if urls, err := r.ConfiguredRemoteURLs(); err != nil || len(urls) != 0 {
+		t.Fatalf("no remotes: %v %v", urls, err)
+	}
+	run("remote", "add", "origin", "git@github.com:me/app.git")
+	run("remote", "add", "my.fork", "https://example.com/fork.git")
+	run("remote", "set-url", "--add", "origin", "https://mirror.example.com/app.git")
+	urls, err := r.ConfiguredRemoteURLs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if urls["origin"] != "git@github.com:me/app.git" || urls["my.fork"] != "https://example.com/fork.git" || len(urls) != 2 {
+		t.Fatalf("urls %v", urls)
+	}
+}

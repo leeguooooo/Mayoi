@@ -549,3 +549,46 @@ func TestScmPanelsLoadOnlyExpandedContent(t *testing.T) {
 		t.Fatal("collapsed repository refreshed metadata")
 	}
 }
+
+func TestShortRemoteURL(t *testing.T) {
+	for url, want := range map[string]string{
+		"git@github.com:me/app.git":           "github.com/me/app",
+		"https://github.com/me/app":           "github.com/me/app",
+		"https://user@gitlab.com/me/app.git/": "gitlab.com/me/app",
+		"ssh://git@host:2222/srv/app.git":     "host:2222/srv/app",
+		"/Users/me/src/app":                   "/Users/me/src/app",
+		"../app.git":                          "../app",
+	} {
+		if got := shortRemoteURL(url); got != want {
+			t.Errorf("shortRemoteURL(%q) = %q, want %q", url, got, want)
+		}
+	}
+}
+
+// Remotes read once stay listed while Branches reads again, so coming back
+// to Remotes shows them rather than none until they are read again; before
+// their first read, Remotes says it is loading.
+func TestScmRemotesStayAcrossBranchReads(t *testing.T) {
+	hs := newHarness(t, true)
+	run := hs.gitRepo()
+	run("remote", "add", "origin", hs.root)
+	a := hs.a
+	a.settings.ScmRepositoryOpen = true
+	a.run("view.scm")
+	hs.settleGit()
+	settleScmPanels(t, hs)
+	p := &a.scm.panels
+	a.switchScmPanelTab(scmRemotesTab)
+	rows := a.scmRows()
+	if r := rows[len(rows)-1]; r.panel == nil || r.panel.label != "Loading…" {
+		t.Fatalf("remotes not yet read: %+v", r.panel)
+	}
+	settleScmPanels(t, hs)
+	a.switchScmPanelTab(scmBranchesTab)
+	settleScmPanels(t, hs)
+	if len(p.remotes) != 1 {
+		t.Fatalf("reading branches dropped the remotes: %+v", p.remotes)
+	}
+	a.switchScmPanelTab(scmRemotesTab)
+	findPanelRow(t, hs, "panel:remote:origin")
+}

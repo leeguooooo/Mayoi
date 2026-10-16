@@ -683,6 +683,8 @@ func (a *app) breadcrumbs(c *ui.Context, t *colTab) {
 			rel = path[len(a.root)+1:]
 		}
 		parts = strings.Split(filepath.ToSlash(rel), "/")
+	} else if t.diff != nil && t.diff.commit != nil && t.diff.commit.from != "" {
+		parts = []string{"Comparison", t.name()}
 	} else if t.diff != nil && t.diff.commit != nil {
 		parts = []string{"Commit " + git.ShortHash(t.diff.commit.hash), t.name()}
 	} else {

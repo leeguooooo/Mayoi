@@ -841,3 +841,37 @@ func TestReopenClosedTerminal(t *testing.T) {
 	}
 	a.closeTerminals()
 }
+
+// The panel's header has a menu that moves the panel to a side, and back.
+func TestTerminalPanelHeaderMenu(t *testing.T) {
+	if testing.Short() {
+		t.Skip("starts a shell")
+	}
+	hs := newHarness(t, true)
+	a, tt := hs.a, hs.tt
+	a.run("view.terminal")
+	hs.settle()
+	if err := tt.RightClick("TERMINAL"); err != nil {
+		t.Fatal(err)
+	}
+	if menu := tt.Menu(); !slices.Contains(menu, "Panel Position") || !slices.Contains(menu, "Hide Panel") {
+		t.Fatalf("the panel's menu: %q", menu)
+	}
+	if err := tt.ChooseMenuItem("Panel Position", "Right"); err != nil {
+		t.Fatal(err)
+	}
+	hs.settle()
+	if a.panelSide() != "right" || !a.window.PanelOpen {
+		t.Fatalf("the panel is at %s, open %v", a.panelSide(), a.window.PanelOpen)
+	}
+	if err := tt.RightClick("TERMINAL"); err != nil {
+		t.Fatal(err)
+	}
+	if err := tt.ChooseMenuItem("Panel Position", "Bottom"); err != nil {
+		t.Fatal(err)
+	}
+	hs.settle()
+	if a.panelSide() != "bottom" || a.settings.PanelPosition != "" {
+		t.Fatalf("the panel is at %s (%q)", a.panelSide(), a.settings.PanelPosition)
+	}
+}

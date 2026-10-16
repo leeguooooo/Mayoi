@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/egoist/mygo/ui"
 	"mayoi/internal/git"
-	"mayoi/internal/highlight"
 	"mayoi/internal/vfs"
 )
 
@@ -44,44 +43,28 @@ func (a *app) commitToolsMenu(m *ui.Menu, cm git.Commit, head bool, action *func
 	}
 }
 
-// revisionName is how a revision of a comparison is named: a commit by
-// its short hash, HEAD as it is.
-func revisionName(rev string) string {
-	if rev == "HEAD" {
-		return rev
-	}
-	return git.ShortHash(rev)
-}
-
-// Comparisons open as a syntax-highlighted patch document, so binary changes,
-// renames, and either direction retain Git's precise semantics and can be saved.
+// compareRevisions opens the changes from one commit to another in a
+// diff of their own, side by side or inline as the changes show, which
+// stays on those two commits however HEAD moves after.
 func (a *app) compareRevisions(from, to string) {
 	r := a.git.repo
 	if r == nil {
 		return
 	}
-	var patch string
-	a.gitRead("Comparing…", func(repo *git.Repo) (err error) { patch, err = repo.ComparePatch(from, to); return }, func() {
+	var hashes [2]string
+	a.gitRead("Comparing…", func(repo *git.Repo) (err error) {
+		for i, rev := range []string{from, to} {
+			if hashes[i], err = repo.ResolveCommit(rev); err != nil {
+				return err
+			}
+		}
+		return nil
+	}, func() {
 		if a.git.repo != r {
 			return
 		}
-		name := revisionName(from) + " → " + revisionName(to)
-		if patch == "" {
-			a.tell(note{message: "No differences: " + name})
-			return
-		}
-		a.openGitText(name+".diff", patch)
+		a.showCommit(git.Commit{Hash: hashes[0] + ".." + hashes[1]}, true)
 	})
-}
-
-func (a *app) openGitText(title, text string) {
-	a.nextID++
-	doc := newDocument(a.nextID, "", text, highlight.New(highlight.Lexer("changes.diff"), a.invalidate))
-	doc.title = title
-	a.docs = append(a.docs, doc)
-	col := a.fileColumn()
-	a.addTab(col, len(col.tabs), &colTab{ed: newEditor(doc)})
-	a.activate(col, len(col.tabs)-1, true)
 }
 
 func (a *app) commitPatch(cm git.Commit, save bool) {

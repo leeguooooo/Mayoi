@@ -38,11 +38,14 @@ type scmPanels struct {
 	request         *int
 	gen             int
 	loaded, loading bool
-	err             string
-	branches        []git.Branch
-	remotes         []git.Remote
-	closed          map[string]bool
-	logs            map[string]*scmPanelLog
+	// remotesLoaded is whether remotes were read since the repository was
+	// opened: a read for Branches leaves those last read.
+	remotesLoaded bool
+	err           string
+	branches      []git.Branch
+	remotes       []git.Remote
+	closed        map[string]bool
+	logs          map[string]*scmPanelLog
 }
 type scmPanelLog struct {
 	from, to        string
@@ -102,7 +105,11 @@ func (a *app) refreshScmPanels() {
 		var remotes []git.Remote
 		if err == nil && tab == scmRemotesTab {
 			var names []string
+			var urls map[string]string
 			names, err = repo.Remotes()
+			if err == nil {
+				urls, err = repo.ConfiguredRemoteURLs()
+			}
 			for _, name := range names {
 				remote := git.Remote{Name: name}
 				if openRemotes[name] {
@@ -111,6 +118,7 @@ func (a *app) refreshScmPanels() {
 						break
 					}
 				}
+				remote.URL = urls[name]
 				remotes = append(remotes, remote)
 			}
 		}
@@ -122,8 +130,10 @@ func (a *app) refreshScmPanels() {
 			if err != nil {
 				p.err = err.Error()
 			} else {
-				p.branches, p.remotes = branches, remotes
-				p.loaded = true
+				p.branches, p.loaded = branches, true
+				if tab == scmRemotesTab {
+					p.remotes, p.remotesLoaded = remotes, true
+				}
 			}
 			p.gen++
 		})
@@ -201,7 +211,7 @@ func (a *app) scmPanelRows(rows []scmRow) []scmRow {
 		label, kind := "Loading…", "status"
 		if p.err != "" {
 			label, kind = "Unable to read Git refs — Retry", "retry"
-		} else if p.loaded {
+		} else if p.loaded && (key != "remotes" || p.remotesLoaded) {
 			label = "No branches"
 			if key == "remotes" {
 				label = "No remotes — Add Remote…"
@@ -295,9 +305,9 @@ func (a *app) scmPanelRows(rows []scmRow) []scmRow {
 		r.count = len(p.remotes)
 	}
 	rows = append(rows, r)
-	if !p.loaded || p.err != "" {
+	if !p.loaded || p.err != "" || section == "remotes" && !p.remotesLoaded {
 		addStatus(section, 1)
-		if !p.loaded {
+		if !p.loaded || section == "remotes" && !p.remotesLoaded {
 			return rows
 		}
 	}
@@ -324,6 +334,10 @@ func (a *app) scmPanelRows(rows []scmRow) []scmRow {
 				p.closed[key] = true
 			}
 			r := panelRow("remote", key, remote.Name, "", 1)
+			// Its URL rows say where it points once it opens.
+			if p.closed[key] && remote.URL != "" {
+				r.panel.detail = shortRemoteURL(remote.URL)
+			}
 			r.panel.remote = remote
 			rows = append(rows, r)
 			if p.closed[key] {
@@ -397,6 +411,22 @@ func (a *app) activateScmPanelRow(r scmRow) {
 	case "addRemote":
 		a.askPanelRemote(nil, false)
 	}
+}
+
+// shortRemoteURL is where a remote's URL points, as host and path:
+// git@github.com:me/app.git and https://github.com/me/app both read
+// github.com/me/app.
+func shortRemoteURL(url string) string {
+	s := url
+	if _, rest, ok := strings.Cut(s, "://"); ok {
+		s = rest
+	} else if user, rest, ok := strings.Cut(s, "@"); ok && !strings.Contains(user, "/") {
+		s = strings.Replace(rest, ":", "/", 1)
+	}
+	if i := strings.Index(s, "@"); i >= 0 && i < strings.Index(s+"/", "/") {
+		s = s[i+1:]
+	}
+	return strings.TrimSuffix(strings.TrimSuffix(s, "/"), ".git")
 }
 
 func scmPanelIndent(depth int) float32 { return 4 + float32(depth)*10 }
@@ -501,8 +531,11 @@ func (a *app) scmPanelRowView(c *ui.Context, r scmRow, action *func()) {
 			}
 			ui.Icon(c, icon).FontSize(12).TextColor(p.muted)
 		}
-		if q.kind == "branch" {
+		switch q.kind {
+		case "branch":
 			ui.Icon(c, iconBranch).FontSize(13).TextColor(p.muted)
+		case "remote":
+			ui.Icon(c, iconCloud).FontSize(13).TextColor(p.muted)
 		}
 		col := p.text
 		if q.branch != nil && q.branch.Current {
