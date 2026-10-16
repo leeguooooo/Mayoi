@@ -81,10 +81,13 @@ source and how fast it runs, and [CONTRIBUTING.md](CONTRIBUTING.md) to build, te
 
 ## Requirements
 
-- macOS 13 or later
+- macOS 13 or later, or Linux with GTK 3, such as Ubuntu 22.04 or later
 - Go 1.27 or later
 
-Mayoi also builds for Linux and Windows.
+Mayoi also builds for Windows.
+
+On Linux, `curl -fsSL https://github.com/sorrycc/Mayoi/releases/latest/download/install.sh | sh` installs the latest
+release for you in `~/.local`, with the `mayoi` command and an entry in the applications menu.
 
 ## Getting started
 
@@ -93,7 +96,8 @@ go run ./cmd/mayoi ~/some/project    # open a folder or a file
 go tool mygo build                   # build build/darwin-arm64/Mayoi.app and a .dmg
 ```
 
-To open folders from a shell, choose **File → Install 'mayoi' Command**, then run `mayoi .` or `mayoi <file>`.
+To open folders from a shell, choose **File → Install 'mayoi' Command** (on Linux the installer adds it), then run
+`mayoi .` or `mayoi <file>`.
 
 ## Keyboard shortcuts
 

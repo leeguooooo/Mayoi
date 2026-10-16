@@ -7,6 +7,22 @@ needs a `## <version>` section here, or its build fails.
 
 - Linux: Mayoi no longer sometimes crashes as it starts on machines that
   draw with the GPU (#24).
+- Linux: text shows dark and crisp again where the desktop antialiases text
+  by its subpixels, as on Ubuntu 22.04, where it was faint and tinted.
+- Linux: tabs indent code to their tab stops; they took no room, so
+  indented code lost its indentation and the caret stood off its text.
+- Linux: a submenu of the menu bar, such as **View → Theme**, opens under
+  the pointer rather than closing the menu.
+- Shortcuts read as their keys on Windows and Linux, a cap for Ctrl, Shift
+  and the key, on the welcome page and in Quick Open, rather than a cap
+  for each letter.
+- Linux: `install.sh` and the Debian package add the `mayoi` command, and
+  `mayoi .` in a terminal gives the prompt back at once, leaving Mayoi
+  open when the terminal closes.
+- Opening a branch checked out in another worktree works with Git before
+  2.36, as on Ubuntu 22.04.
+- A paste to or from a remote host canceled as it finishes leaves nothing
+  behind.
 - Selecting a file anywhere in its Explorer row switches to its editor,
   including clicks in the space beside its name, and moving through the
   Explorer with the arrow keys previews each file in turn.
