@@ -53,3 +53,26 @@ func TestPruneMissingWorktree(t *testing.T) {
 		t.Fatalf("switch after pruning: %v", err)
 	}
 }
+
+// Git before 2.36 lists worktrees a field a line, with no -z, and a path
+// with a newline in it over two lines.
+func TestNulRecords(t *testing.T) {
+	out := "worktree /r\nHEAD 8d66\nbranch refs/heads/main\n\n" +
+		"worktree /w/plain\nHEAD 8d66\nbranch refs/heads/plain\n\n" +
+		"worktree /w/work tree\nquoted\"name\nHEAD 8d66\nbranch refs/heads/topic\n\n" +
+		"worktree /bare\nbare\n\n"
+	want := "worktree /r\x00HEAD 8d66\x00branch refs/heads/main\x00\x00" +
+		"worktree /w/plain\x00HEAD 8d66\x00branch refs/heads/plain\x00\x00" +
+		"worktree /w/work tree\nquoted\"name\x00HEAD 8d66\x00branch refs/heads/topic\x00\x00" +
+		"worktree /bare\x00bare\x00\x00"
+	got := nulRecords(out)
+	if got != want {
+		t.Fatalf("nulRecords:\n%q\nwant\n%q", got, want)
+	}
+	if p := worktreeForBranch("/r", got, "topic"); p != "/w/work tree\nquoted\"name" {
+		t.Errorf("topic is in %q", p)
+	}
+	if p := worktreeForBranch("/r", got, "plain"); p != "/w/plain" {
+		t.Errorf("plain is in %q", p)
+	}
+}
