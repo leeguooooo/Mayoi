@@ -7,6 +7,14 @@
   "macos": {
     "minimumSystemVersion": "13.0"
   },
+  "linux": {
+    "command": "mayoi",
+    "comment": "A small, fast code editor",
+    "categories": [
+      "Development",
+      "TextEditor"
+    ]
+  },
   "updates": {
     "publicKey": "kW6/B4DkWNQdyHkFOrU6tpvLfb5xGVvyYhrIQF7Bct4=",
     "github": "sorrycc/Mayoi"

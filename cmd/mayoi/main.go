@@ -4,6 +4,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"mayoi/internal/cli"
 	"mayoi/internal/keymap"
@@ -52,6 +53,9 @@ type mayoi struct {
 	// quitting is set once the app quits, so that the windows it closes
 	// stay in the settings, to open again at the next start.
 	quitting bool
+	// menuKey is the key (menuKey) of the menu last set, which is set
+	// again only when it changes.
+	menuKey string
 }
 
 func (h *desktop) openFolder(done func(string)) {
@@ -229,6 +233,11 @@ func main() {
 	// scripts/dev.sh's Mayoi-dev, so a development app leaves Mayoi's alone.
 	if dir := os.Getenv("MAYOI_DATA_DIR"); dir != "" {
 		mygo.App.SetPath(mygo.PathUserData, dir)
+	}
+	// From a terminal on Linux, Mayoi runs on apart from it; before the
+	// lock, which the Mayoi it starts takes.
+	if detach() {
+		return
 	}
 	// One Mayoi runs: the folders and files another is started with open
 	// in this one.
@@ -545,7 +554,14 @@ func (m *mayoi) refreshMenu() {
 // setMenu sets the app's menu as a's window has it, and the Dock's menu of
 // the recent folders.
 func (m *mayoi) setMenu(a *app) {
-	mygo.App.SetMenu(a.menu(runtime.GOOS == "darwin" && mygo.App.IsPackaged(), m.run))
+	// Setting a menu bar on Linux makes it anew, which closes a menu that
+	// is open, as when the window has the focus again from a submenu's
+	// grab: one that does not change stays.
+	menu := a.menu(runtime.GOOS == "darwin" && mygo.App.IsPackaged(), m.run)
+	if key := menuKey(menu.Items()); key != m.menuKey {
+		m.menuKey = key
+		mygo.App.SetMenu(menu)
+	}
 	if runtime.GOOS != "darwin" {
 		return
 	}
@@ -567,12 +583,33 @@ func (m *mayoi) setMenu(a *app) {
 	mygo.App.Dock.SetMenu(dock)
 }
 
+// menuKey writes out what items show of themselves, their submenus'
+// too, the same for menus that look and do the same: an item runs the
+// command of its label, in the window it is chosen in.
+func menuKey(items []*mygo.MenuItem) string {
+	var b strings.Builder
+	var write func(items []*mygo.MenuItem)
+	write = func(items []*mygo.MenuItem) {
+		for _, it := range items {
+			fmt.Fprintf(&b, "%q %q %v %v %q %t %t %t %q [", it.ID, it.Label, it.Type, it.Role, it.Accelerator,
+				it.Disabled, it.Hidden, it.Checked, it.ToolTip)
+			write(it.Submenu)
+			b.WriteString("]")
+		}
+	}
+	write(items)
+	return b.String()
+}
+
 // run runs a command of the menu in the window it was chosen in, or the
 // one focused last.
 func (m *mayoi) run(id string, win *mygo.Window) {
 	if len(m.wins) == 0 {
 		return
 	}
+	// The menu toggled the item chosen, which the command may leave as
+	// it was: the menu is set anew as the next one is made.
+	m.menuKey = ""
 	h := m.wins[0]
 	for _, f := range m.frames {
 		if f.win == win && f.active != nil {

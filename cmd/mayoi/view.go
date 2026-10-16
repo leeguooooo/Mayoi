@@ -11,6 +11,8 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/egoist/mygo/ui"
 
@@ -1134,18 +1136,45 @@ func (a *app) welcomeAction(c *ui.Context, icon *ui.SVG, label, keys string, fn 
 	}
 }
 
-// keycaps shows keys as the caps of a keyboard, one a symbol, except for
-// a named key as "esc".
-func (a *app) keycaps(c *ui.Context, keys string) {
+// keycaps shows keys as the caps of a keyboard.
+func (a *app) keycaps(c *ui.Context, keys string) { a.caps(c, splitCaps(keys)) }
+
+// splitCaps splits keys as keyText writes them into their caps: those of
+// "Ctrl+Shift+P" at the pluses, those of "⇧⌘P" a symbol each, with a
+// named key, as "esc" or "F3", one cap, and the strokes of a chord apart
+// by spaces one after the other.
+func splitCaps(keys string) []string {
 	var caps []string
-	if isASCII(keys) && len(keys) > 1 && strings.ToLower(keys) == keys && !strings.ContainsAny(keys, "`") {
-		caps = []string{keys}
-	} else {
-		for _, k := range keys {
-			caps = append(caps, string(k))
+	for _, stroke := range strings.Fields(keys) {
+		if len(stroke) > 1 && strings.Contains(stroke, "+") {
+			// The key may be "+" itself, after the modifiers.
+			plus := strings.HasSuffix(stroke, "++")
+			for _, k := range strings.Split(strings.TrimSuffix(stroke, "++"), "+") {
+				if k != "" {
+					caps = append(caps, k)
+				}
+			}
+			if plus {
+				caps = append(caps, "+")
+			}
+			continue
+		}
+		word := ""
+		for _, r := range stroke {
+			if r < utf8.RuneSelf && (unicode.IsLetter(r) || unicode.IsDigit(r)) {
+				word += string(r)
+				continue
+			}
+			if word != "" {
+				caps, word = append(caps, word), ""
+			}
+			caps = append(caps, string(r))
+		}
+		if word != "" {
+			caps = append(caps, word)
 		}
 	}
-	a.caps(c, caps)
+	return caps
 }
 
 // caps shows keys as the caps of a keyboard.
