@@ -118,7 +118,8 @@ func TestKeymapOverridesShortcuts(t *testing.T) {
 	}
 	// The menu gives up the keys the file binds, and those it takes away.
 	for _, cmd := range a.commands() {
-		if cmd.id == "view.sidebar" && a.menuAccel(cmd) != "" {
+		// cmd+b is CmdOrCtrl+B only where CmdOrCtrl is Command, on a Mac.
+		if cmd.id == "view.sidebar" && a.menuAccel(cmd) != "" && ui.Cmd == ui.Super {
 			t.Errorf("Toggle Sidebar keeps %s, which the file binds", a.menuAccel(cmd))
 		}
 		if cmd.id == "file.save" && a.menuAccel(cmd) != "CmdOrCtrl+S" {

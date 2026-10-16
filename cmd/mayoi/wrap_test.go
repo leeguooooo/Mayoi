@@ -134,7 +134,12 @@ func TestWrappedCaretStaysInView(t *testing.T) {
 	a := hs.a
 	a.run("view.wordWrap")
 	hs.settle()
-	hs.key(ui.Cmd, ui.KeyDown)
+	// To the end: ⌘↓ on macOS, Ctrl+End elsewhere.
+	if ui.Cmd == ui.Super {
+		hs.key(ui.Super, ui.KeyDown)
+	} else {
+		hs.key(ui.Ctrl, ui.KeyEnd)
+	}
 	if d.sel[1] != d.buf.Snapshot().Len() {
 		t.Fatalf("the caret is at %d, not the end", d.sel[1])
 	}

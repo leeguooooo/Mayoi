@@ -36,6 +36,12 @@ func TestSidebarTitleFits(t *testing.T) {
 	}
 	a.run("view.scm")
 	hs.settleGit()
+	// A wider interface font, as DejaVu Sans, has the whole title in a
+	// wider sidebar.
+	if !tt.HasText("SOURCE CONTROL") {
+		a.window.SidebarWidth = 320
+		hs.settle()
+	}
 	whole("SOURCE CONTROL")
 	a.window.SidebarWidth = 180
 	hs.settle()

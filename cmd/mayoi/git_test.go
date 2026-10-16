@@ -104,7 +104,11 @@ func TestSourceControlStagesAndCommits(t *testing.T) {
 	os.Remove(hs.path("go.mod"))
 	a.run("view.scm")
 	hs.settleGit()
-	for _, s := range []string{"SOURCE CONTROL", "CHANGES", "UNTRACKED", "main.go", "notes.txt", "go.mod"} {
+	// The title is GIT where the font leaves no room for the whole.
+	if !hs.tt.HasText("SOURCE CONTROL") && !hs.tt.HasText("GIT") {
+		t.Errorf("no title: %q", hs.tt.Texts())
+	}
+	for _, s := range []string{"CHANGES", "UNTRACKED", "main.go", "notes.txt", "go.mod"} {
 		if !hs.tt.HasText(s) {
 			t.Errorf("no %q: %q", s, hs.tt.Texts())
 		}

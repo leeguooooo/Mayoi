@@ -30,6 +30,9 @@ func featDir(t *testing.T) string {
 
 // featShell makes terminals start a zsh with a short, colorful prompt.
 func featShell(t *testing.T) {
+	if _, err := os.Stat("/bin/zsh"); err != nil {
+		t.Skip("no zsh")
+	}
 	z := t.TempDir()
 	os.WriteFile(filepath.Join(z, ".zshrc"), []byte(`
 PROMPT='%F{cyan}%1~%f %F{magenta}main%f %F{green}❯%f '
