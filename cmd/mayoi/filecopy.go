@@ -15,6 +15,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"mayoi/internal/remote"
+	"mayoi/internal/vfs"
 )
 
 // ⌘C in the explorer puts the file chosen on the clipboard as the Finder
@@ -141,6 +142,23 @@ func (a *app) pasteAcross(srcs []string, dir string) {
 	go func() {
 		got, err := transferInto(srcs, dir, x.progress)
 		a.post(func() {
+			if err == nil && x.progress.Canceled() {
+				// Canceled while the status bar still showed it: what
+				// arrived goes, as of a transfer stopped on the way, but
+				// never a file it copied, and then the status.
+				go func() {
+					for _, p := range got {
+						if !slices.Contains(srcs, p) {
+							vfs.RemoveAll(p)
+						}
+					}
+					a.post(func() {
+						a.endTransfer(x)
+						a.transferFailed("Could not paste", remote.ErrCanceled)
+					})
+				}()
+				return
+			}
 			a.endTransfer(x)
 			if err != nil {
 				a.transferFailed("Could not paste", err)
