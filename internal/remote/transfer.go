@@ -188,7 +188,9 @@ tar -x -o -f - -C "$s" || exit 1
 	out, err := c.run(ctx, sock, pr, script, append([]string{dir}, names...)...)
 	pr.Close()
 	if err != nil {
-		return nil, p.stopped(err)
+		// Those it placed before it stopped, as a cancel can come after
+		// the last: whole, each ended by its NUL.
+		return splitNul(out[:bytes.LastIndexByte(out, 0)+1]), p.stopped(err)
 	}
 	return splitNul(out), nil
 }

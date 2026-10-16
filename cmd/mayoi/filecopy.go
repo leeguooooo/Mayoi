@@ -142,10 +142,11 @@ func (a *app) pasteAcross(srcs []string, dir string) {
 	go func() {
 		got, err := transferInto(srcs, dir, x.progress)
 		a.post(func() {
-			if err == nil && x.progress.Canceled() {
-				// Canceled while the status bar still showed it: what
-				// arrived goes, as of a transfer stopped on the way, but
-				// never a file it copied, and then the status.
+			if x.progress.Canceled() {
+				// Canceled while the status bar still showed it, though
+				// the copy got to its end, or placed some before it
+				// stopped: what arrived goes, but never a file it
+				// copied, and then the status.
 				go func() {
 					for _, p := range got {
 						if !slices.Contains(srcs, p) {
