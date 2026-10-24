@@ -221,7 +221,7 @@ func (h *desktop) redrawWindows() {
 func (h *desktop) installCLI() {
 	go func() {
 		home, _ := os.UserHomeDir()
-		p, err := cli.Install(cli.Dirs(home, cli.ShellPath()), appBundle())
+		p, err := cli.Install(cli.Dirs(home, cli.LoginPath()), appBundle())
 		switch {
 		case errors.Is(err, cli.ErrCanceled):
 		case err != nil:
@@ -235,7 +235,7 @@ func (h *desktop) installCLI() {
 func (h *desktop) uninstallCLI() {
 	go func() {
 		home, _ := os.UserHomeDir()
-		removed, err := cli.Uninstall([]string{filepath.Join(home, ".local", "bin"), "/usr/local/bin"})
+		removed, err := cli.Uninstall(cli.InstalledDirs(home, cli.ShellPath()))
 		switch {
 		case errors.Is(err, cli.ErrCanceled):
 		case err != nil:
@@ -304,8 +304,14 @@ func main() {
 	// only; git, its hooks and what else Mayoi runs look for commands
 	// where the user's shell does. In the background, as a slow shell
 	// would hold up the window.
+	shellPathReady := make(chan struct{})
 	if runtime.GOOS != "windows" && os.Getenv("MAYOI_SNAPSHOT") == "" {
-		go func() { os.Setenv("PATH", strings.Join(cli.ShellPath(), string(os.PathListSeparator))) }()
+		go func() {
+			os.Setenv("PATH", strings.Join(cli.ShellPath(), string(os.PathListSeparator)))
+			close(shellPathReady)
+		}()
+	} else {
+		close(shellPathReady)
 	}
 	// Release builds check for updates every hour (startUpdates) and show
 	// them in the window, whose click opens MyGo's update window; the
@@ -378,7 +384,10 @@ func main() {
 		m.launch(append(m.pending, argPaths(os.Args[1:], wd)...))
 		m.pending = nil
 		m.listenCLI()
-		refreshCLI()
+		go func() {
+			<-shellPathReady
+			refreshCLI()
+		}()
 		m.startCloud()
 		m.startUpdates()
 		if len(m.wins) == 0 {
