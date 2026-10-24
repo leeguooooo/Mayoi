@@ -5,7 +5,6 @@ needs a `## <version>` section here, or its build fails.
 
 ## Unreleased
 
-- `scripts/bump.sh` asks before preparing and pushing a release; `--yes` runs unattended.
 - `mayoi run <id>[=<arg>]` runs any command of the window, and `mayoi commands` lists them.
 - `mayoi -g file:line` opens a file at a line, `-d` compares two files, and `-n` opens a new window.
 - `mayoi --remote host:/path` opens a folder on an SSH host.
@@ -13,6 +12,7 @@ needs a `## <version>` section here, or its build fails.
 - `mayoi` says what went wrong and exits non-zero when it fails.
 - Mayoi updates a `mayoi` command installed by an older version as it starts.
 - Opened from the Finder or Dock, Mayoi uses your shell's `PATH`, so git hooks find `pnpm` and `node`.
+- `scripts/bump.sh` asks before preparing and pushing a release; `--yes` runs unattended.
 
 ## 0.11.11
 
