@@ -33,6 +33,9 @@ needs a `## <version>` section here, or its build fails.
 - A remote file or folder dragged to another app arrives as its `host:/path` text.
 - **File > Install 'mayoi' Command** uses a folder on your shell's `PATH`, or says how to add one.
 - Uninstalling removes `mayoi` from every folder it was installed in.
+- Install and upgrade on macOS with Homebrew using the `sorrycc/mayoi` tap.
+- Homebrew installs the `mayoi` shell command and removes it when uninstalling the app.
+- The Homebrew `mayoi` command reports when Mayoi.app cannot be found.
 
 ## 0.12.3
 
