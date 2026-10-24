@@ -28,7 +28,10 @@ Write the release notes under `## Unreleased` in `CHANGELOG.md`, as [AGENTS.md](
 scripts/bump.sh patch    # or minor, major, or a version such as 0.2.0
 ```
 
-It sets the version in `mygo.json`, renames `## Unreleased` to `## <version>` in `CHANGELOG.md`, commits and tags `v<version>`, and after asking pushes `main` and the tag. The
+It previews the version and release notes, then asks before changing files, creating a commit or tag, or pushing.
+After confirmation, it sets the version in `mygo.json`, renames `## Unreleased` to `## <version>` in `CHANGELOG.md`,
+commits and tags `v<version>`, and pushes `main` and the tag. An unattended release must explicitly use
+`scripts/bump.sh --yes patch`; without `--yes`, a non-interactive invocation stops without changing files or tags. The
 [Release workflow](.github/workflows/release.yml) then builds macOS (arm64 and Intel, signed and notarized), Windows and
 Linux, uploads them with their signed updates, and publishes the release. Installed apps check for it every hour and
 show it in the status bar, or from **Mayoi → Check for Updates…**; the update window shows the changelog section.

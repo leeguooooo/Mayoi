@@ -31,6 +31,8 @@ jobs:
           files="$(gofmt -l .)"
           test -z "$files" || { echo "::error::not formatted with gofmt:"; echo "$files"; exit 1; }
       - run: go tool staticcheck ./...
+      - name: Release script confirmation
+        run: python3 scripts/test-bump.py
 
   linux:
     name: Linux (${{ matrix.os }})

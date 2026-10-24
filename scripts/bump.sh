@@ -2,7 +2,7 @@
 # Sets a new version in mygo.json, commits it as v<version> with a tag of the
 # same name, and pushes main and the tag, which makes the
 # Release workflow build and publish it.
-# Usage: scripts/bump.sh <version | patch | minor | major>
+# Usage: scripts/bump.sh [--yes] <version | patch | minor | major>
 #
 # The "## Unreleased" section of CHANGELOG.md becomes "## <version>" in the
 # same commit, unless a "## <version>" section is there already: the update
@@ -12,6 +12,11 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ASSUME_YES=false
+if [ "${1:-}" = --yes ]; then
+    ASSUME_YES=true
+    shift
+fi
 if [ $# -ne 1 ]; then
     sed -n '2,11s/^# \{0,1\}//p' "$0" >&2
     exit 1
@@ -84,6 +89,25 @@ else
 fi
 
 echo "==> $CURRENT -> $VERSION"
+echo "==> notes of the release, from CHANGELOG.md:"
+if [ -n "$RENAME_UNRELEASED" ]; then
+    scripts/release-notes.sh Unreleased
+else
+    scripts/release-notes.sh "$VERSION"
+fi
+echo
+if ! "$ASSUME_YES"; then
+    if [ ! -t 0 ]; then
+        echo "Releasing needs confirmation in a terminal; use --yes for an unattended release." >&2
+        exit 1
+    fi
+    REPLY=
+    read -r -p "Create $TAG and push main and the tag to origin, starting the release? [y/N] " REPLY || true
+    case "$REPLY" in
+        y | Y | yes | YES) ;;
+        *) echo "Cancelled; no files or tags were changed."; exit 0 ;;
+    esac
+fi
 # Rewrites only the version line, so the rest of mygo.json keeps its
 # formatting.
 /usr/bin/python3 - "$VERSION" <<'PY'
@@ -116,13 +140,11 @@ if [ "$(git diff --name-only | tr '\n' ' ')" != "$FILES " ] \
     echo "Undo with: git checkout -- $FILES" >&2
     exit 1
 fi
+# FILES is a fixed list of repository filenames, deliberately split here.
+# shellcheck disable=SC2086
 git commit --quiet -m "$TAG" $FILES
 git tag "$TAG"
 git --no-pager log -1 --stat --format='%h %s' "$TAG"
 echo
-echo "==> notes of the release, from CHANGELOG.md:"
-scripts/release-notes.sh "$VERSION"
-echo
-
 git push --quiet --atomic origin main "$TAG"
 echo "==> pushed $TAG. The Release workflow: https://github.com/sorrycc/Mayoi/actions/workflows/release.yml"
