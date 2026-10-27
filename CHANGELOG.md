@@ -31,6 +31,8 @@ needs a `## <version>` section here, or its build fails.
 - MDX previews omit top-level `import`/`export` blocks, preserving code examples and paragraph text.
 - Files dragged from **Explorer**, **Source Control** or **Search**, and folders from **Explorer**, drop into other apps.
 - A remote file or folder dragged to another app arrives as its `host:/path` text.
+- **File > Install 'mayoi' Command** uses a folder on your shell's `PATH`, or says how to add one.
+- Uninstalling removes `mayoi` from every folder it was installed in.
 
 ## 0.12.3
 
@@ -76,8 +78,6 @@ needs a `## <version>` section here, or its build fails.
 - `mayoi -w` waits for its files to close, so it works as `git config core.editor "mayoi -w"`.
 - `mayoi` says what went wrong and exits non-zero when it fails.
 - Mayoi updates a `mayoi` command installed by an older version as it starts.
-- **File > Install 'mayoi' Command** uses a folder on your shell's `PATH`, or says how to add one.
-- Uninstalling removes `mayoi` from every folder it was installed in.
 - Opened from the Finder or Dock, Mayoi uses your shell's `PATH`, so git hooks find `pnpm` and `node`.
 
 ## 0.11.11

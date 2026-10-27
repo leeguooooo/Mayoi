@@ -235,7 +235,8 @@ func (h *desktop) installCLI() {
 func (h *desktop) uninstallCLI() {
 	go func() {
 		home, _ := os.UserHomeDir()
-		removed, err := cli.Uninstall(cli.InstalledDirs(home, cli.ShellPath()))
+		// PATH is the login shell's already, as main set it at start.
+		removed, err := cli.Uninstall(cli.InstalledDirs(home, filepath.SplitList(os.Getenv("PATH"))))
 		switch {
 		case errors.Is(err, cli.ErrCanceled):
 		case err != nil:
